@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model FileSystem {
+  id           Int       @id @default(autoincrement())
+  name         String
+  isFolder     Boolean   @default(false)
+  dateCreated  DateTime  @default(now())
+  dateModified DateTime  @updatedAt
+  size         Int       @default(0)
+  path         String
+  bucketName   String
+  deletedAt    DateTime?
+
+  @@unique([path, bucketName])
+  @@index([bucketName])
+  @@index([name])
+  @@index([path])
+  @@index([deletedAt])
+  @@index([bucketName, deletedAt])
+}
+
+model DraftMetaData {
+  id         Int      @id @default(autoincrement())
+  name       String
+  path       String
+  parentName String   @default("")
+  isSync     Boolean  @default(false)
+  modified   DateTime @default(now())
+  created    DateTime @default(now())
+  bucketName String   @default("")
+  projectId  String?
+
+  @@unique([path, name])
+  @@index([parentName])
+  @@index([isSync])
+}
+
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  email     String?  @unique
+  password  String   // Hashed password
+  role      String   @default("admin")
+  createdAt DateTime @default(now())
+
+  projects  Project[]
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  bucketName  String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @default(now()) @updatedAt
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  versions    ProjectVersion[]
+
+  @@index([bucketName])
+  @@index([userId])
+}
+
+model ProjectVersion {
+  id          String   @id @default(uuid())
+  projectId   String
+  versionName String
+  createdAt   DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  activeFiles SnapshotFileMap[]
+}
+
+model FileSnapshot {
+  id               String   @id // UUID generated externally
+  projectId        String
+  projectVersionId String
+  filePath         String
+  contentHash      String   @unique
+  storageType      String // 'full' | 'delta'
+  storageKey       String // Provider-agnostic key for presigned URLs
+  byteSize         Int      @default(0)
+  language         String?
+  timestamp        DateTime @default(now())
+  category         String?
+  name             String   @default("")
+
+  parentEdges FileEdge[]        @relation("ParentEdge")
+  childEdges  FileEdge[]        @relation("ChildEdge")
+  activeIn    SnapshotFileMap[]
+}
+
+model FileEdge {
+  parentId String
+  childId  String
+
+  parent FileSnapshot @relation("ParentEdge", fields: [parentId], references: [id], onDelete: Cascade)
+  child  FileSnapshot @relation("ChildEdge", fields: [childId], references: [id], onDelete: Cascade)
+
+  @@id([parentId, childId])
+}
+
+model SnapshotFileMap {
+  projectId        String
+  projectVersionId String
+  filePath         String
+  fileSnapshotId   String
+
+  projectVersion ProjectVersion @relation(fields: [projectVersionId], references: [id], onDelete: Cascade)
+  fileSnapshot   FileSnapshot   @relation(fields: [fileSnapshotId], references: [id], onDelete: Cascade)
+
+  @@id([projectVersionId, filePath])
+}
+
+model BranchHead {
+  branchName     String   @id
+  headSnapshotId String
+  createdAt      DateTime @default(now())
+  parentBranch   String?
+
+  @@index([headSnapshotId])
+}
