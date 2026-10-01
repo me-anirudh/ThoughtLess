@@ -50,7 +50,9 @@ The absolute easiest way to run ThoughtLess is using Docker. We have bundled the
 
 3. Access the services:
    - **ThoughtLess App:** [http://localhost:3000](http://localhost:3000)
-   - **MinIO Console:** [http://localhost:9001](http://localhost:9001) *(Login: `admin` / `password123`)*
+   - **MinIO Console:** [http://localhost:9001](http://localhost:9001) *(Local Dev Login: `admin` / `password123`)*
+
+> ⚠️ **SECURITY WARNING:** The `docker-compose.yml` file uses hardcoded, default passwords (like `password123`) to make local testing easy. **Never use these defaults in a production environment.** Always use secure, randomly generated secrets injected via environment variables when deploying to the web.
 
 *Note: The Docker setup automatically applies the Prisma database schemas on startup.*
 
