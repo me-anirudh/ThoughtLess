@@ -50,7 +50,9 @@ The absolute easiest way to run ThoughtLess is using Docker. We have bundled the
 
 3. Access the services:
    - **ThoughtLess App:** [http://localhost:3000](http://localhost:3000)
-   - **MinIO Console:** [http://localhost:9001](http://localhost:9001) *(Login: `admin` / `password123`)*
+   - **MinIO Console:** [http://localhost:9001](http://localhost:9001) *(Local Dev Login: `admin` / `password123`)*
+
+> ⚠️ **SECURITY WARNING:** The `docker-compose.yml` file uses hardcoded, default passwords (like `password123`) to make local testing easy. **Never use these defaults in a production environment.** Always use secure, randomly generated secrets injected via environment variables when deploying to the web.
 
 *Note: The Docker setup automatically applies the Prisma database schemas on startup.*
 
@@ -101,20 +103,6 @@ When a user commits a file:
 5. Depending on the depth of the commit chain, the system persists either a heavy `FullBlob` or a highly efficient `DeltaBlob`.
 
 When historical files are viewed, ThoughtLess walks the DAG backwards to the nearest `FullBlob` and rapidly applies the `DeltaBlob` patches forward to perfectly reconstruct the file.
-
----
-
-## 🧪 Testing
-
-We use **Vitest** for our test suite, heavily focusing on adversarial round-trip testing of the Diff Engine to guarantee zero data loss.
-
-```bash
-# Run all tests
-npm run test
-
-# Run tests in watch mode
-npm run test:watch
-```
 
 ---
 
