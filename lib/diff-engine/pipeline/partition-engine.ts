@@ -179,8 +179,9 @@ export class PartitionEngineStage implements IPipelineStage {
         newStart: curNew, newEnd: newHashes.length
       });
     }
-{/*
-    // If no regions were formed, the whole file is one changed region
+
+    // If no regions were formed (e.g. small files below MIN_STABLE_BLOCK),
+    // the whole file is one changed region.
     if (regions.length === 0) {
       regions.push({
         id: 'region-0',
@@ -188,7 +189,7 @@ export class PartitionEngineStage implements IPipelineStage {
         oldStart: 0, oldEnd: oldHashes.length,
         newStart: 0, newEnd: newHashes.length
       });
-    }  */}
+    }
 
     ctx.regions = regions;
   }

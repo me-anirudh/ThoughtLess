@@ -153,7 +153,14 @@ function parseUnifiedPatch(patch: string): ParsedHunk[] {
             } else if (bodyLine.startsWith(' ')) {
                 hunk.lines.push({ type: 'equal', content: bodyLine.slice(1) });
             } else if (bodyLine === '') {
-                // Trailing empty line at end of patch — skip
+                // A bare empty line inside the hunk body is a context (equal)
+                // line whose leading-space prefix was stripped or omitted by
+                // the serializer.  BUT: the very last line of the patch
+                // string after a final '\n' split is always '', so skip that.
+                const isTrailingEnd = (i === patchLines.length - 1);
+                if (!isTrailingEnd) {
+                    hunk.lines.push({ type: 'equal', content: '' });
+                }
             }
             i++;
         }

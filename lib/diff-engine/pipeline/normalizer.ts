@@ -84,7 +84,9 @@ export class NormalizerStage implements IPipelineStage {
  4. Zero Garbage Collection OverheadStandard Array ([]): As standard arrays grow, shrink, or change types, the JavaScript engine constantly reallocates memory and 
  triggers the Garbage Collector to clean up old memory, causing micro-stutters.Uint32Array: The size is locked at creation. 
  It never grows, never shrinks, and never changes type. Memory pressure drops to zero.*/}
-    const lines = str.split('\n');
+    // Handle empty content: str.split('\n') on '' produces [''], which is a
+    // phantom line.  An empty file should have zero lines.
+    const lines = str === '' ? [] : str.split('\n');
     const lineHashes = new Uint32Array(lines.length);
 
     for (let i = 0; i < lines.length; i++) {

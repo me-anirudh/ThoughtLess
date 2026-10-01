@@ -1,28 +1,26 @@
-FROM node:22-alpine
+FROM node:20-alpine
 
 WORKDIR /app
 
-COPY package*.json .
-
-RUN npm install
-
-COPY . .
-
-FROM node:22-alpine
-WORKDIR /app
-
-# 1. Copy package files and install dependencies FIRST (this gets cached)
+# Copy dependency definitions
 COPY package.json package-lock.json* ./
-RUN npm install
+COPY prisma ./prisma/
 
-# 2. Copy the rest of your application code
+# Install dependencies (using legacy-peer-deps to resolve any strict version conflicts)
+RUN npm install --legacy-peer-deps
+
+# Copy all files
 COPY . .
 
-# 3. Generate Prisma client (doesn't need the database running yet)
+# Generate Prisma Client and Build Next.js
+ENV NEXT_TELEMETRY_DISABLED=1
+ENV NODE_ENV=production
 RUN npx prisma generate
+RUN npm run build
 
-# 4. Expose the port
+# Expose port
 EXPOSE 3000
+ENV PORT=3000
 
-# 5. At runtime, push the DB schema and start the dev server
-CMD ["sh", "-c", "npx prisma db push && npm run dev"]
+# Push Prisma schema to the database automatically on startup, then run the app
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npm start"]
