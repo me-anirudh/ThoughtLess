@@ -41,3 +41,22 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+
+# Local database files
+*.db
+*.db-journal
+*.sqlite
+
+# Docker local configurations
+.docker
+docker-compose.override.yml
+
+# IDE and Editor configurations
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
