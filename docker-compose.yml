@@ -1,17 +1,35 @@
+version: '3.8'
+
 services:
-  postgres:
-    image: postgres:17
-    container_name: postgres
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: password123
-      POSTGRES_DB: mydb
-      TZ: Asia/Kolkata
-      PGTZ: Asia/Kolkata
+      # These match the DB and MinIO services configured below
+      - DATABASE_URL=postgresql://admin:password123@db:5432/mydb?schema=public&options=-c%20timezone=Asia/Kolkata
+      - MINIO_ENDPOINT=minio
+      - MINIO_PORT=9000
+      - MINIO_ACCESS_KEY=admin
+      - MINIO_SECRET_KEY=password123
+    depends_on:
+      db:
+        condition: service_healthy
+      minio:
+        condition: service_started
+
+  db:
+    image: postgres:15-alpine
     ports:
       - "5432:5432"
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=password123
+      - POSTGRES_DB=mydb
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      - pgdata:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U admin -d mydb"]
       interval: 5s
@@ -19,54 +37,17 @@ services:
       retries: 5
 
   minio:
-    image: quay.io/minio/minio
-    container_name: minio
+    image: minio/minio
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: password123
+      - MINIO_ROOT_USER=admin
+      - MINIO_ROOT_PASSWORD=password123
     command: server /data --console-address ":9001"
     volumes:
-      - minio_data:/data
-    healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:9000/minio/health/live || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
-
-  web:
-    image: node:22-alpine
-    container_name: nextjs_app
-    working_dir: /app
-    ports:
-      - "3000:3000"
-    volumes:
-      - .:/app
-      - /app/node_modules
-      - /app/.next
-    restart: unless-stopped
-    environment:
-      - DATABASE_URL=postgresql://admin:password123@postgres:5432/mydb?schema=public
-      - MINIO_ENDPOINT=minio
-      - NODE_ENV=development
-      - NODE_OPTIONS=--max-old-space-size=4096
-    command: >
-      sh -c "npm install && 
-             npx prisma db push && 
-             npx prisma generate && 
-             npm run dev"
-    depends_on:
-      postgres:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000', (r) => { if (r.statusCode === 200) process.exit(0); else process.exit(1); }).on('error', () => process.exit(1))"]
-      interval: 15s
-      timeout: 5s
-      retries: 3
-      start_period: 30s
+      - miniodata:/data
 
 volumes:
-  postgres_data:
-  minio_data:
+  pgdata:
+  miniodata:

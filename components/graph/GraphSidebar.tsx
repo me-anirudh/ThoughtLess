@@ -417,9 +417,9 @@ export default function GraphSideBar() {
         // const diffworker = new Worker('../workers/diff-engine.worker.ts'); 
         if (activeId !== "graph") return null;
 
-        const finishCommitUpload = async (snapshotId: string, content: string, draftPath: string, fileSnapshot: FileSnapshot, draftName: string) => {
+        const finishCommitUpload = async (snapshotId: string, content: string, draftPath: string, fileSnapshot: FileSnapshot, draftName: string, precomputedBlob?: FullBlob | DeltaBlob | null) => {
                 try {
-                        const cmd = new commitCommand(snapshotId, content, draftPath, fileSnapshot, commitLabel, draftName); 
+                        const cmd = new commitCommand(snapshotId, content, draftPath, fileSnapshot, commitLabel, draftName, precomputedBlob); 
 
                         // Wait for MinIO upload to finish
                         await CommandManager.executeCommand(cmd); 
@@ -493,9 +493,8 @@ export default function GraphSideBar() {
                                         content: contentBuffer.buffer as ArrayBuffer,
                                         compressionAlgo: 'none'
                                 };
-                                await mergeDraft(fileSnapshot, fullBlob);
                                 await deleteDraftFull(draftPath, draftName);
-                                await finishCommitUpload(snapshotId, content, draftPath, fileSnapshot, draftName);
+                                await finishCommitUpload(snapshotId, content, draftPath, fileSnapshot, draftName, fullBlob);
                         } else {
                                 const diffWorker = new Worker(new URL('../../workers/diff-engine.worker.ts', import.meta.url));
                                 
@@ -513,9 +512,8 @@ export default function GraphSideBar() {
                                                                 patchFormat: 'myers-unified'
                                                         };
 
-                                                        await mergeDraft(fileSnapshot, deltaBlob);
                                                         await deleteDraftFull(draftPath, draftName);
-                                                        await finishCommitUpload(snapshotId, content, draftPath, fileSnapshot, draftName);
+                                                        await finishCommitUpload(snapshotId, content, draftPath, fileSnapshot, draftName, deltaBlob);
                                                 } else {
                                                         console.error('Worker failed to compute diff:', e.data.error);
                                                         setIsCommitting(false);

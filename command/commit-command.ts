@@ -1,11 +1,10 @@
 import { Command } from "@/command/Command-history";
-import { FileSnapshot } from "@/types/indexed-db-schema";
+import { FileSnapshot, FullBlob, DeltaBlob } from "@/types/indexed-db-schema";
 import { CommitCategory, RecentCommit } from "@/types/interfaces";
 import { useGraphDataStore } from "@/store/graph-data-store";
 import { mergeDraft, deleteSnapshotFromIndexedDB } from "@/lib/client/vcs-db";
 import { useEditorStore } from "@/store/editor-store";
 import { useGraphSidebarStore } from "@/store/graph-sidebar";
-// import { CommandHistory } from "./Command-history";
 
 export class commitCommand implements Command{
         private snapshotId : string;
@@ -13,15 +12,29 @@ export class commitCommand implements Command{
         private draftPath : string; 
         private draftName : string; 
         private commitLabel: string;
-        private fileSnapshot : FileSnapshot; 
+        private fileSnapshot : FileSnapshot;
+        // Pre-computed blob — when provided, execute() uses it instead of
+        // creating a brand-new FullBlob.  This is essential for the delta
+        // path: the worker computes the DeltaBlob and passes it here so
+        // that execute() persists the actual delta, not a fresh FullBlob.
+        private precomputedBlob: FullBlob | DeltaBlob | null;
         
-        constructor(snapshotId: string, content: string, draftPath: string, fileSnapshot: FileSnapshot, commitLabel : string, draftName: string){
+        constructor(
+                snapshotId: string,
+                content: string,
+                draftPath: string,
+                fileSnapshot: FileSnapshot,
+                commitLabel: string,
+                draftName: string,
+                precomputedBlob?: FullBlob | DeltaBlob | null,
+        ){
                 this.snapshotId = snapshotId; 
                 this.content = content; 
                 this.draftPath = draftPath; 
                 this.draftName = draftName; 
                 this.fileSnapshot = fileSnapshot; 
                 this.commitLabel = commitLabel;
+                this.precomputedBlob = precomputedBlob ?? null;
         }
         async execute(){
                  const store = useEditorStore.getState();
@@ -71,14 +84,22 @@ export class commitCommand implements Command{
                                                 // Non-critical
                                         }
                 
-                                        // Write FileSnapshot + blob to IndexedDB (idempotent — safe on first run AND redo)
-                                        const contentBuffer = new TextEncoder().encode(this.content);
-                                        const fullBlob = {
-                                                fileSnapshotId: this.snapshotId,
-                                                content: contentBuffer.buffer as ArrayBuffer,
-                                                compressionAlgo: 'none' as const
-                                        };
-                                        await mergeDraft({ ...this.fileSnapshot, storageType: 'full' as const }, fullBlob);
+                                        // Write FileSnapshot + blob to IndexedDB.
+                                        // If a pre-computed blob was supplied (e.g. from the
+                                        // diff worker producing a DeltaBlob), persist it
+                                        // directly instead of always creating a FullBlob.
+                                        if (this.precomputedBlob) {
+                                                await mergeDraft(this.fileSnapshot, this.precomputedBlob);
+                                        } else {
+                                                // Fallback: no pre-computed blob → store as FullBlob
+                                                const contentBuffer = new TextEncoder().encode(this.content);
+                                                const fullBlob: FullBlob = {
+                                                        fileSnapshotId: this.snapshotId,
+                                                        content: contentBuffer.buffer as ArrayBuffer,
+                                                        compressionAlgo: 'none' as const
+                                                };
+                                                await mergeDraft({ ...this.fileSnapshot, storageType: 'full' as const }, fullBlob);
+                                        }
 
                                         // Stay on the original file path, not the internal .git/objects path
                                         const filePath = this.fileSnapshot.filePath || this.draftPath;

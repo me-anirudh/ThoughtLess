@@ -10,7 +10,7 @@ export interface DiffResult {
   operations: EditOperation[];
   characterChanges: CharacterChange[];
   moves: MoveAnchor[]; 
-  patchAST: PatchAST; 
+  patchAST: PatchAST | null; 
   patches: PatchSet;
   statistics: DiffStatistics;
   benchmarks: BenchmarkData;
