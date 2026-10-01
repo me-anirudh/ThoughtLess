@@ -104,20 +104,6 @@ When historical files are viewed, ThoughtLess walks the DAG backwards to the nea
 
 ---
 
-## 🧪 Testing
-
-We use **Vitest** for our test suite, heavily focusing on adversarial round-trip testing of the Diff Engine to guarantee zero data loss.
-
-```bash
-# Run all tests
-npm run test
-
-# Run tests in watch mode
-npm run test:watch
-```
-
----
-
 ## 📄 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
